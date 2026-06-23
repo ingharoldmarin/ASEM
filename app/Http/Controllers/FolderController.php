@@ -13,7 +13,7 @@ class FolderController extends Controller
     public function show(Ficha $ficha, Folder $folder)
     {
         abort_if($folder->ficha_id !== $ficha->id, 404);
-        $folder->load('documents.uploader');
+        $folder->load('documents.uploader', 'reviewer');
         return view('folders.show', compact('ficha', 'folder'));
     }
 
@@ -101,12 +101,32 @@ class FolderController extends Controller
     public function reject(Request $request, Folder $folder)
     {
         $data = $request->validate(['rejection_comment' => 'required|string|max:500']);
+
+        // El instructor deja una observación de pendiente; coordinación/admin formalizan el rechazo
+        $status = auth()->user()->isInstructor() ? 'pendiente_subir' : 'rechazado';
+
         $folder->update([
-            'status'             => 'rechazado',
+            'status'             => $status,
             'reviewed_by'        => auth()->id(),
             'reviewed_at'        => now(),
             'rejection_comment'  => $data['rejection_comment'],
         ]);
-        return back()->with('success', 'Carpeta rechazada.');
+
+        $msg = $status === 'pendiente_subir'
+            ? 'Observación guardada. La carpeta quedó pendiente por subir documentación.'
+            : 'Observación guardada. La carpeta se marcó como rechazada.';
+
+        return back()->with('success', $msg);
+    }
+
+    public function clearObservation(Folder $folder)
+    {
+        $folder->update([
+            'status'            => $folder->documents()->count() > 0 ? 'en_revision' : 'sin_subir',
+            'rejection_comment' => null,
+            'reviewed_by'       => auth()->id(),
+            'reviewed_at'       => now(),
+        ]);
+        return back()->with('success', 'Observación eliminada.');
     }
 }

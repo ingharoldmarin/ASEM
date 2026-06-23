@@ -20,4 +20,14 @@ class ResultadoAprendizaje extends Model
         return $this->belongsToMany(User::class, 'aprendiz_resultado', 'resultado_id', 'aprendiz_id')
             ->withPivot('status', 'evaluated_at')->withTimestamps();
     }
+
+    public function guias()
+    {
+        return $this->hasMany(ResultadoGuia::class, 'resultado_id');
+    }
+
+    public function actividades()
+    {
+        return $this->hasMany(ResultadoActividad::class, 'resultado_id');
+    }
 }

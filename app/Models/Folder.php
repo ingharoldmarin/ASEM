@@ -28,22 +28,24 @@ class Folder extends Model
     public function getStatusLabelAttribute(): string
     {
         return match($this->status) {
-            'sin_subir'   => 'Sin subir',
-            'en_revision' => 'En revisión',
-            'aprobado'    => 'Aprobado',
-            'rechazado'   => 'Rechazado',
-            default       => $this->status,
+            'sin_subir'        => 'Sin subir',
+            'en_revision'      => 'En revisión',
+            'aprobado'         => 'Aprobado',
+            'rechazado'        => 'Rechazado',
+            'pendiente_subir'  => 'Pendiente por subir documentación',
+            default            => $this->status,
         };
     }
 
     public function getStatusColorAttribute(): string
     {
         return match($this->status) {
-            'sin_subir'   => 'gray',
-            'en_revision' => 'yellow',
-            'aprobado'    => 'green',
-            'rechazado'   => 'red',
-            default       => 'gray',
+            'sin_subir'        => 'gray',
+            'en_revision'      => 'yellow',
+            'aprobado'         => 'green',
+            'rechazado'        => 'red',
+            'pendiente_subir'  => 'orange',
+            default            => 'gray',
         };
     }
 }

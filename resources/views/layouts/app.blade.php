@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'ASEM') — ASEM</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="h-full">
 <div class="min-h-screen flex">
@@ -31,6 +32,7 @@
                 <x-nav-link :href="route('instructors.programs')"    label="Prog. Instructor"icon="academic-cap"/>
                 <x-nav-link :href="route('admin.users')"             label="Usuarios"        icon="user-group"/>
                 <x-nav-link :href="route('competencias.index')"      label="Competencias"    icon="chart-bar"/>
+                <x-nav-link :href="route('consolidado.index')"       label="Consolidados"    icon="chart-bar"/>
             @endif
 
             @if(auth()->user()->isCoordinacion())
@@ -40,6 +42,7 @@
                 <x-nav-link :href="route('coordinacion.instructors.create')" label="Nuevo Instructor" icon="user-plus"/>
                 <x-nav-link :href="route('instructors.programs')"            label="Prog. Instructor" icon="academic-cap"/>
                 <x-nav-link :href="route('competencias.index')"              label="Competencias"     icon="chart-bar"/>
+                <x-nav-link :href="route('consolidado.index')"              label="Consolidados"     icon="chart-bar"/>
             @endif
 
             @if(auth()->user()->isInstructor())
@@ -49,6 +52,7 @@
                 <x-nav-link :href="route('reports.index')"           label="Mis Informes"    icon="document"/>
                 <x-nav-link :href="route('reportes.asistencia')"     label="Rep. Asistencia" icon="chart-bar"/>
                 <x-nav-link :href="route('competencias.index')"      label="Competencias"    icon="chart-bar"/>
+                <x-nav-link :href="route('consolidado.index')"       label="Consolidados"    icon="chart-bar"/>
             @endif
 
             @if(auth()->user()->isAdmin())

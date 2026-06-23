@@ -74,7 +74,10 @@
                         @endphp
                         <tr class="hover:bg-gray-50">
                             <td class="px-5 py-3">
-                                <p class="text-gray-800 font-medium">{{ $resultado->nombre }}</p>
+                                <a href="{{ route('resultados.detalle', $resultado) }}"
+                                   class="text-gray-800 font-medium hover:underline link-primary text-sm">
+                                    {{ $resultado->nombre }}
+                                </a>
                                 @if($resultado->descripcion)
                                     <p class="text-xs text-gray-400 mt-0.5">{{ $resultado->descripcion }}</p>
                                 @endif

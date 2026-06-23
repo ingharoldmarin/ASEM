@@ -67,29 +67,49 @@ class CompetenciaController extends Controller
 
     public function show(Competencia $competencia, \Illuminate\Http\Request $request)
     {
-        $competencia->load('resultados');
+        $competencia->load(['resultados.actividades.notas', 'resultados.aprendices']);
 
-        // Fichas del programa de esta competencia que tienen aprendices
-        $fichas = \App\Models\Ficha::with('aprendices')
-            ->where('program_id', $competencia->program_id)
-            ->get();
+        // Fichas del programa de esta competencia
+        $fichasQuery = \App\Models\Ficha::with('aprendices')
+            ->where('program_id', $competencia->program_id);
 
-        $fichaSeleccionada = null;
+        if (auth()->user()->isInstructor()) {
+            $fichasQuery->whereHas('instructors', fn($q) => $q->where('users.id', auth()->id()));
+        }
+
+        $fichas = $fichasQuery->get();
+
+        $fichaSeleccionada    = null;
         $aprendicesConEstados = collect();
 
         if ($request->filled('ficha_id')) {
             $fichaSeleccionada = $fichas->firstWhere('id', $request->ficha_id);
 
             if ($fichaSeleccionada) {
-                // Para cada aprendiz de la ficha, carga su estado en cada resultado
-                $aprendicesConEstados = $fichaSeleccionada->aprendices->map(function ($aprendiz) use ($competencia) {
+                $aprendicesConEstados = $fichaSeleccionada->aprendices->sortBy('name')->map(function ($aprendiz) use ($competencia) {
                     $estados = [];
                     foreach ($competencia->resultados as $resultado) {
-                        $pivot = \App\Models\ResultadoAprendizaje::find($resultado->id)
-                            ->aprendices()
-                            ->where('users.id', $aprendiz->id)
-                            ->first();
-                        $estados[$resultado->id] = $pivot?->pivot->status ?? 'pendiente';
+                        // Calcular promedio de actividades
+                        $actividadIds = $resultado->actividades->pluck('id');
+                        $notas = \App\Models\ActividadNota::whereIn('actividad_id', $actividadIds)
+                            ->where('aprendiz_id', $aprendiz->id)
+                            ->pluck('nota');
+
+                        if ($notas->isNotEmpty()) {
+                            $promedio = round($notas->avg(), 1);
+                            $status   = $promedio >= 3.5 ? 'aprobado' : 'no_aprobado';
+                        } else {
+                            $promedio = null;
+                            // Buscar estado manual si existe
+                            $pivot = $resultado->aprendices
+                                ->firstWhere('id', $aprendiz->id);
+                            $status = $pivot?->pivot->status ?? 'pendiente';
+                        }
+
+                        $estados[$resultado->id] = [
+                            'status'   => $status,
+                            'promedio' => $promedio,
+                        ];
                     }
                     $aprendiz->estados_resultado = $estados;
                     return $aprendiz;

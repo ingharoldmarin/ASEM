@@ -32,8 +32,8 @@
     </div>
     @endif
     @if($rejectedFolders > 0)
-    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
-        <strong>Acción requerida:</strong> {{ $rejectedFolders }} carpeta(s) fueron rechazadas y deben ser corregidas.
+    <div class="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 text-sm text-orange-800">
+        <strong>Acción requerida:</strong> {{ $rejectedFolders }} carpeta(s) tienen observación y deben ser corregidas.
     </div>
     @endif
 </div>
@@ -46,14 +46,42 @@
     @else
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach($fichas as $ficha)
+            @php
+                $completa = $ficha->folders_pendientes_count === 0 && $ficha->folders_observadas_count === 0;
+            @endphp
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <div class="flex items-start justify-between">
+                <div class="flex items-start justify-between gap-2">
                     <div>
                         <p class="font-semibold text-gray-800">Ficha {{ $ficha->numero }}</p>
                         <p class="text-xs text-gray-500 mt-0.5">{{ $ficha->program->name }}</p>
                         <p class="text-xs text-gray-400">{{ $ficha->municipio }}</p>
                     </div>
                 </div>
+
+                <div class="mt-3">
+                    @if($completa)
+                    <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Carpetas completas ({{ $ficha->folders_count }}/{{ $ficha->folders_count }})
+                    </span>
+                    @else
+                    <div class="flex flex-wrap gap-1.5">
+                        @if($ficha->folders_pendientes_count > 0)
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 font-medium">
+                            {{ $ficha->folders_pendientes_count }} por subir
+                        </span>
+                        @endif
+                        @if($ficha->folders_observadas_count > 0)
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
+                            {{ $ficha->folders_observadas_count }} con observación
+                        </span>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+
                 <div class="mt-4 flex flex-wrap gap-2">
                     <a href="{{ route('fichas.show', $ficha) }}"
                        class="text-xs bg-primary-50 text-primary-600 hover:bg-blue-100 rounded px-2 py-1 transition-colors">

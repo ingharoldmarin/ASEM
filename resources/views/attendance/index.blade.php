@@ -27,6 +27,9 @@
                 <span class="text-green-600 font-medium">{{ $session->records->where('status', 'presente')->count() }} presentes</span>
                 <span class="text-red-500">{{ $session->records->where('status', 'ausente')->count() }} ausentes</span>
                 <a href="{{ route('attendance.show', [$ficha, $session]) }}" class="link-primary hover:underline ml-2">Ver detalle</a>
+                @if(auth()->user()->isInstructor() || auth()->user()->canManage())
+                <a href="{{ route('attendance.edit', [$ficha, $session]) }}" class="text-blue-500 hover:underline ml-1">Editar</a>
+                @endif
             </div>
         </div>
     </div>

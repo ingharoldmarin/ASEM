@@ -11,6 +11,7 @@ use App\Http\Controllers\FolderController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\InstructorProgramController;
 use App\Http\Controllers\MatriculaExcelController;
+use App\Http\Controllers\ResultadoRecursoController;
 use App\Http\Controllers\ReporteAsistenciaController;
 use App\Http\Controllers\MonthlyReportController;
 use App\Http\Controllers\ProgramController;
@@ -82,6 +83,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/resultados', [AprendizController::class, 'misResultados'])->name('resultados');
     });
 
+    // Detalle de resultado (aprendiz también puede ver)
+    Route::middleware('role:admin,coordinacion,instructor,aprendiz')->group(function () {
+        Route::get('/resultados/{resultado}/detalle', [ResultadoRecursoController::class, 'show'])->name('resultados.detalle');
+    });
+
     // Programas (admin + coordinacion)
     Route::middleware('role:admin,coordinacion')->group(function () {
         Route::resource('programs', ProgramController::class)->except(['show']);
@@ -120,12 +126,13 @@ Route::middleware('auth')->group(function () {
         Route::patch('/folders/{folder}/rename',        [FolderController::class, 'rename'])->name('folders.rename');
         Route::post('/folders/{folder}/upload',         [FolderController::class, 'uploadDocument'])->name('folders.upload');
         Route::delete('/documents/{document}',          [FolderController::class, 'deleteDocument'])->name('documents.delete');
+        Route::post('/folders/{folder}/reject',  [FolderController::class, 'reject'])->name('folders.reject');
+        Route::post('/folders/{folder}/clear-observation', [FolderController::class, 'clearObservation'])->name('folders.clear-observation');
     });
 
-    // Aprobacion/rechazo de carpetas (solo admin + coordinacion)
+    // Aprobacion de carpetas (solo admin + coordinacion)
     Route::middleware('role:admin,coordinacion')->group(function () {
         Route::post('/folders/{folder}/approve', [FolderController::class, 'approve'])->name('folders.approve');
-        Route::post('/folders/{folder}/reject',  [FolderController::class, 'reject'])->name('folders.reject');
     });
 
     // Informes mensuales generales (admin + coordinacion + instructor)
@@ -144,7 +151,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/fichas/{ficha}/attendance',          [AttendanceController::class, 'index'])->name('attendance.index');
         Route::get('/fichas/{ficha}/attendance/create',   [AttendanceController::class, 'create'])->name('attendance.create');
         Route::post('/fichas/{ficha}/attendance',         [AttendanceController::class, 'store'])->name('attendance.store');
-        Route::get('/fichas/{ficha}/attendance/{session}',[AttendanceController::class, 'show'])->name('attendance.show');
+        Route::get('/fichas/{ficha}/attendance/{session}',      [AttendanceController::class, 'show'])->name('attendance.show');
+        Route::get('/fichas/{ficha}/attendance/{session}/edit', [AttendanceController::class, 'edit'])->name('attendance.edit');
+        Route::put('/fichas/{ficha}/attendance/{session}',      [AttendanceController::class, 'update'])->name('attendance.update');
+    });
+
+    // Consolidados por ficha (admin + coordinacion + instructor)
+    Route::middleware('role:admin,coordinacion,instructor')->group(function () {
+        Route::get('/consolidado',                       [\App\Http\Controllers\ConsolidadoController::class, 'index'])->name('consolidado.index');
+        Route::get('/consolidado/{ficha}',               [\App\Http\Controllers\ConsolidadoController::class, 'show'])->name('consolidado.show');
+        Route::get('/consolidado/{ficha}/excel',         [\App\Http\Controllers\ConsolidadoController::class, 'exportExcel'])->name('consolidado.excel');
+        Route::get('/consolidado/{ficha}/pdf',           [\App\Http\Controllers\ConsolidadoController::class, 'exportPdf'])->name('consolidado.pdf');
     });
 
     // Competencias y resultados (admin + coordinacion + instructor)
@@ -155,5 +172,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/resultados/{resultado}',               [CompetenciaController::class, 'destroyResultado'])->name('resultados.destroy');
         Route::post('/resultados/{resultado}/evaluate',                [CompetenciaController::class, 'evaluateAprendiz'])->name('resultados.evaluate');
         Route::post('/competencias/{competencia}/evaluate-ficha',       [CompetenciaController::class, 'evaluateFicha'])->name('competencias.evaluate-ficha');
+
+        // Guías, actividades y notas por resultado
+        Route::get('/resultados/{resultado}/detalle',                   [ResultadoRecursoController::class, 'show'])->name('resultados.detalle');
+        Route::post('/resultados/{resultado}/guias',                    [ResultadoRecursoController::class, 'uploadGuia'])->name('resultados.guias.upload');
+        Route::delete('/guias/{guia}',                                  [ResultadoRecursoController::class, 'deleteGuia'])->name('resultados.guias.delete');
+        Route::post('/resultados/{resultado}/actividades',              [ResultadoRecursoController::class, 'storeActividad'])->name('resultados.actividades.store');
+        Route::delete('/actividades/{actividad}',                       [ResultadoRecursoController::class, 'destroyActividad'])->name('resultados.actividades.destroy');
+        Route::post('/actividades/{actividad}/calificar-masivo',        [ResultadoRecursoController::class, 'calificarMasivo'])->name('actividades.calificar-masivo');
     });
 });

@@ -48,20 +48,24 @@
             @foreach($ficha->folders as $folder)
             @php
                 $cardClass = match($folder->status) {
-                    'en_revision' => 'border-yellow-200 bg-yellow-50',
-                    'aprobado'    => 'border-green-200 bg-green-50',
-                    'rechazado'   => 'border-red-200 bg-red-50',
-                    default       => 'border-gray-200 bg-gray-50',
+                    'en_revision'     => 'border-yellow-200 bg-yellow-50',
+                    'aprobado'        => 'border-green-200 bg-green-50',
+                    'rechazado'       => 'border-red-200 bg-red-50',
+                    'pendiente_subir' => 'border-orange-200 bg-orange-50',
+                    default           => 'border-gray-200 bg-gray-50',
                 };
                 $badgeClass = match($folder->status) {
-                    'en_revision' => 'bg-yellow-100 text-yellow-700',
-                    'aprobado'    => 'bg-green-100 text-green-700',
-                    'rechazado'   => 'bg-red-100 text-red-700',
-                    default       => 'bg-gray-100 text-gray-500',
+                    'en_revision'     => 'bg-yellow-100 text-yellow-700',
+                    'aprobado'        => 'bg-green-100 text-green-700',
+                    'rechazado'       => 'bg-red-100 text-red-700',
+                    'pendiente_subir' => 'bg-orange-100 text-orange-700',
+                    default           => 'bg-gray-100 text-gray-500',
                 };
+                $isAlert = in_array($folder->status, ['rechazado', 'pendiente_subir']);
             @endphp
             <a href="{{ route('folders.show', [$ficha, $folder]) }}"
-               class="block border rounded-lg p-3 hover:shadow-sm transition-shadow {{ $cardClass }}">
+               class="block border rounded-lg p-3 hover:shadow-sm transition-shadow {{ $cardClass }}
+                      {{ $folder->status === 'rechazado' ? 'ring-1 ring-red-300' : ($folder->status === 'pendiente_subir' ? 'ring-1 ring-orange-300' : '') }}">
                 <div class="flex items-start justify-between gap-1 mb-2">
                     <p class="text-xs font-medium text-gray-700 leading-tight">{{ $folder->name }}</p>
                     <span class="text-xs shrink-0 text-gray-400">#{{ $folder->position }}</span>
@@ -75,6 +79,18 @@
                         {{ $folder->responsible_role === 'coordinacion' ? 'Coord.' : 'Inst.' }}
                     </span>
                 </div>
+                @if($isAlert && $folder->rejection_comment)
+                <div class="mt-2 flex items-start gap-1 rounded px-1.5 py-1
+                    {{ $folder->status === 'pendiente_subir' ? 'bg-orange-100 border border-orange-200' : 'bg-red-100 border border-red-200' }}">
+                    <svg class="w-3 h-3 mt-0.5 shrink-0 {{ $folder->status === 'pendiente_subir' ? 'text-orange-500' : 'text-red-500' }}"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A1 1 0 003 19.5h18a1 1 0 00.89-1.5L13.71 3.86a1 1 0 00-1.42 0z"/>
+                    </svg>
+                    <p class="text-[11px] leading-tight {{ $folder->status === 'pendiente_subir' ? 'text-orange-700' : 'text-red-700' }}">
+                        {{ Str::limit($folder->rejection_comment, 60) }}
+                    </p>
+                </div>
+                @endif
             </a>
             @endforeach
         </div>

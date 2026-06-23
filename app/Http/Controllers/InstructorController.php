@@ -12,7 +12,16 @@ class InstructorController extends Controller
     public function dashboard()
     {
         $user = auth()->user();
-        $fichas = $user->fichasAsInstructor()->with('program')->get();
+        $fichas = $user->fichasAsInstructor()
+            ->with('program')
+            ->withCount('folders')
+            ->withCount(['folders as folders_pendientes_count' => function ($q) {
+                $q->where('status', 'sin_subir');
+            }])
+            ->withCount(['folders as folders_observadas_count' => function ($q) {
+                $q->whereIn('status', ['pendiente_subir', 'rechazado']);
+            }])
+            ->get();
         $myPrograms = $user->programs()->orderBy('name')->get();
 
         $pendingFolders = Folder::whereIn('ficha_id', $fichas->pluck('id'))
@@ -20,7 +29,7 @@ class InstructorController extends Controller
             ->count();
 
         $rejectedFolders = Folder::whereIn('ficha_id', $fichas->pluck('id'))
-            ->where('status', 'rechazado')
+            ->whereIn('status', ['rechazado', 'pendiente_subir'])
             ->count();
 
         return view('instructor.dashboard', compact('fichas', 'pendingFolders', 'rejectedFolders', 'myPrograms'));

@@ -59,4 +59,34 @@ class AttendanceController extends Controller
         $session->load('records.aprendiz');
         return view('attendance.show', compact('ficha', 'session'));
     }
+
+    public function edit(Ficha $ficha, AttendanceSession $session)
+    {
+        abort_if($session->ficha_id !== $ficha->id, 404);
+        $session->load('records.aprendiz');
+        return view('attendance.edit', compact('ficha', 'session'));
+    }
+
+    public function update(Request $request, Ficha $ficha, AttendanceSession $session)
+    {
+        abort_if($session->ficha_id !== $ficha->id, 404);
+
+        $data = $request->validate([
+            'topic'        => 'nullable|string|max:255',
+            'attendance'   => 'required|array',
+            'attendance.*' => 'required|in:presente,ausente,excusa',
+        ]);
+
+        $session->update(['topic' => $data['topic']]);
+
+        foreach ($data['attendance'] as $aprendizId => $status) {
+            AttendanceRecord::updateOrCreate(
+                ['session_id' => $session->id, 'aprendiz_id' => $aprendizId],
+                ['status' => $status]
+            );
+        }
+
+        return redirect()->route('attendance.show', [$ficha, $session])
+            ->with('success', 'Asistencia actualizada correctamente.');
+    }
 }

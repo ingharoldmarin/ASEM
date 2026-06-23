@@ -16,10 +16,11 @@
         {{-- Estado y acciones de revisión --}}
         @php
             $statusColors = [
-                'sin_subir'   => 'bg-gray-100 text-gray-700',
-                'en_revision' => 'bg-yellow-100 text-yellow-800',
-                'aprobado'    => 'bg-green-100 text-green-800',
-                'rechazado'   => 'bg-red-100 text-red-800',
+                'sin_subir'       => 'bg-gray-100 text-gray-700',
+                'en_revision'     => 'bg-yellow-100 text-yellow-800',
+                'aprobado'        => 'bg-green-100 text-green-800',
+                'rechazado'       => 'bg-red-100 text-red-800',
+                'pendiente_subir' => 'bg-orange-100 text-orange-800',
             ];
         @endphp
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -39,38 +40,40 @@
                         </span>
                     </div>
                 </div>
-                @if(auth()->user()->canManage() && $folder->status === 'en_revision')
-                <div class="flex gap-2">
-                    <form action="{{ route('folders.approve', $folder) }}" method="POST">
-                        @csrf
-                        <button class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-                            Aprobar
-                        </button>
-                    </form>
-                    <button onclick="document.getElementById('reject-form').classList.toggle('hidden')"
-                            class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-                        Rechazar
+                @if(auth()->user()->canManage() && in_array($folder->status, ['en_revision', 'rechazado', 'pendiente_subir']))
+                <form action="{{ route('folders.approve', $folder) }}" method="POST">
+                    @csrf
+                    <button class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
+                        Aprobar
                     </button>
-                </div>
+                </form>
                 @endif
             </div>
 
             @if($folder->rejection_comment)
-            <div class="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
-                <p class="text-xs text-red-700 font-medium">Motivo de rechazo:</p>
-                <p class="text-sm text-red-800 mt-1">{{ $folder->rejection_comment }}</p>
+            @php
+                $isPendiente = $folder->status === 'pendiente_subir';
+                $obsBoxClass  = $isPendiente ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200';
+                $obsIconClass = $isPendiente ? 'text-orange-500' : 'text-red-500';
+                $obsTitleClass = $isPendiente ? 'text-orange-700' : 'text-red-700';
+                $obsAuthorClass = $isPendiente ? 'text-orange-500' : 'text-red-500';
+                $obsTextClass = $isPendiente ? 'text-orange-800' : 'text-red-800';
+            @endphp
+            <div class="mt-3 {{ $obsBoxClass }} border rounded-lg p-3 flex items-start gap-2">
+                <svg class="w-4 h-4 {{ $obsIconClass }} mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A1 1 0 003 19.5h18a1 1 0 00.89-1.5L13.71 3.86a1 1 0 00-1.42 0z"/>
+                </svg>
+                <div>
+                    <p class="text-xs {{ $obsTitleClass }} font-medium">
+                        {{ $isPendiente ? 'Observación — Pendiente por subir documentación' : 'Observación — Carpeta rechazada' }}
+                        @if($folder->reviewer)
+                            <span class="{{ $obsAuthorClass }} font-normal">(por {{ $folder->reviewer->name }})</span>
+                        @endif
+                    </p>
+                    <p class="text-sm {{ $obsTextClass }} mt-1">{{ $folder->rejection_comment }}</p>
+                </div>
             </div>
             @endif
-
-            <form id="reject-form" action="{{ route('folders.reject', $folder) }}" method="POST"
-                  class="mt-3 hidden">
-                @csrf
-                <textarea name="rejection_comment" rows="2" required placeholder="Motivo del rechazo..."
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"></textarea>
-                <button type="submit" class="mt-2 bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-                    Confirmar rechazo
-                </button>
-            </form>
         </div>
 
         {{-- Documentos --}}
@@ -95,8 +98,13 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
+                            <button type="button"
+                                    onclick="previewDocument('{{ asset('storage/' . $doc->file_path) }}', '{{ strtolower(pathinfo($doc->original_name, PATHINFO_EXTENSION)) }}', @js($doc->original_name))"
+                                    class="text-xs link-primary hover:underline">
+                                Previsualizar
+                            </button>
                             <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank"
-                               class="text-xs link-primary hover:underline">Descargar</a>
+                               class="text-xs text-gray-500 hover:underline">Descargar</a>
                             <form action="{{ route('documents.delete', $doc) }}" method="POST"
                                   onsubmit="return confirm('¿Eliminar este documento?')">
                                 @csrf @method('DELETE')
@@ -133,6 +141,34 @@
             </form>
         </div>
 
+        {{-- Observación: marcar qué falta --}}
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <h3 class="font-semibold text-gray-800 mb-1 text-sm flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A1 1 0 003 19.5h18a1 1 0 00.89-1.5L13.71 3.86a1 1 0 00-1.42 0z"/>
+                </svg>
+                Observación
+            </h3>
+            <p class="text-xs text-gray-400 mb-3">Indica qué falta o qué está mal. La carpeta se marcará en rojo y el mensaje se mostrará en su tarjeta.</p>
+            <form action="{{ route('folders.reject', $folder) }}" method="POST">
+                @csrf
+                <textarea name="rejection_comment" rows="3" required
+                          placeholder="Ej: Falta el documento de consentimiento informado..."
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">{{ $folder->rejection_comment }}</textarea>
+                <button type="submit" class="mt-2 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition-colors">
+                    Guardar observación (marca en rojo)
+                </button>
+            </form>
+            @if($folder->rejection_comment)
+            <form action="{{ route('folders.clear-observation', $folder) }}" method="POST" class="mt-2">
+                @csrf
+                <button type="submit" class="w-full text-xs text-gray-500 hover:text-gray-700 py-1">
+                    Quitar observación
+                </button>
+            </form>
+            @endif
+        </div>
+
         {{-- Renombrar carpeta --}}
         @if(auth()->user()->canManage())
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
@@ -151,5 +187,123 @@
     </div>
 
 </div>
+
+{{-- ── Modal de previsualización de documentos ── --}}
+<div id="previewModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-2 sm:p-4"
+     onclick="if(event.target === this) closePreview()">
+    <div class="bg-white rounded-xl shadow-xl w-full h-full sm:h-[90vh] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-100 shrink-0">
+            <p id="previewModalTitle" class="text-sm font-semibold text-gray-800 truncate pr-4"></p>
+            <div class="flex items-center gap-4 shrink-0">
+                <a id="previewDownloadLink" href="#" target="_blank" class="text-xs link-primary hover:underline">Descargar</a>
+                <button type="button" onclick="closePreview()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="previewModalBody" class="flex-1 min-h-0 flex flex-col overflow-hidden bg-gray-50"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+function closePreview() {
+    document.getElementById('previewModal').classList.add('hidden');
+    document.getElementById('previewModalBody').innerHTML = '';
+}
+
+function previewFallback(url, msg) {
+    return '<div class="flex-1 min-h-0 flex items-center justify-center p-10 text-center">' +
+        '<div>' +
+        '<p class="text-sm text-gray-500 mb-3">' + msg + '</p>' +
+        '<a href="' + url + '" target="_blank" class="btn-primary text-sm px-4 py-2 rounded-lg inline-block">Descargar archivo</a>' +
+        '</div></div>';
+}
+
+function previewDocument(url, ext, name) {
+    document.getElementById('previewDownloadLink').href = url;
+    document.getElementById('previewModalTitle').textContent = name;
+    document.getElementById('previewModal').classList.remove('hidden');
+
+    const body = document.getElementById('previewModalBody');
+    body.innerHTML = '<div class="flex-1 min-h-0 flex items-center justify-center p-10"><p class="text-sm text-gray-400">Cargando vista previa...</p></div>';
+
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+
+    if (ext === 'pdf') {
+        body.innerHTML = '<iframe src="' + url + '" class="flex-1 min-h-0 w-full border-0"></iframe>';
+    } else if (imageExts.includes(ext)) {
+        body.innerHTML = '<div class="flex-1 min-h-0 overflow-auto flex items-center justify-center p-4">' +
+            '<img src="' + url + '" class="max-w-full w-auto h-auto">' +
+            '</div>';
+    } else if (ext === 'docx') {
+        fetch(url)
+            .then(r => r.arrayBuffer())
+            .then(buf => mammoth.convertToHtml({ arrayBuffer: buf }))
+            .then(result => {
+                body.innerHTML = '<div class="flex-1 min-h-0 overflow-auto"><div class="prose prose-sm max-w-none p-4 sm:p-6 bg-white w-full">' + result.value + '</div></div>';
+            })
+            .catch(() => {
+                body.innerHTML = previewFallback(url, 'No se pudo generar la vista previa de este documento Word.');
+            });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        fetch(url)
+            .then(r => r.arrayBuffer())
+            .then(buf => renderExcelPreview(XLSX.read(buf, { type: 'array' })))
+            .catch(() => {
+                body.innerHTML = previewFallback(url, 'No se pudo generar la vista previa de esta hoja de cálculo.');
+            });
+    } else {
+        body.innerHTML = previewFallback(url, 'La vista previa no está disponible para archivos .' + ext + '. Descárgalo para verlo.');
+    }
+}
+
+function renderExcelPreview(wb) {
+    const body = document.getElementById('previewModalBody');
+
+    const tabsHtml = wb.SheetNames.map((name, idx) =>
+        '<button type="button" data-sheet="' + idx + '" ' +
+        'class="excel-tab-btn shrink-0 text-xs px-3 py-1.5 rounded-t-lg border-b-2 whitespace-nowrap transition-colors ' +
+        (idx === 0 ? 'border-green-600 text-green-700 font-semibold bg-white' : 'border-transparent text-gray-500 hover:text-gray-700') +
+        '">' + name + '</button>'
+    ).join('');
+
+    body.innerHTML =
+        '<div class="flex-1 min-h-0 flex flex-col">' +
+            '<div class="flex gap-1 px-2 pt-2 border-b border-gray-200 bg-gray-100 overflow-x-auto shrink-0">' + tabsHtml + '</div>' +
+            '<div id="excelSheetContainer" class="flex-1 min-h-0 overflow-auto bg-white"></div>' +
+        '</div>';
+
+    const container = document.getElementById('excelSheetContainer');
+
+    function showSheet(idx) {
+        const sheet = wb.Sheets[wb.SheetNames[idx]];
+        container.innerHTML = '<div class="p-2">' + XLSX.utils.sheet_to_html(sheet, { id: 'sheet-' + idx }) + '</div>';
+        container.querySelectorAll('table').forEach(t => {
+            t.classList.add('text-xs', 'border-collapse');
+            t.querySelectorAll('td, th').forEach(c => c.classList.add('border', 'border-gray-200', 'px-2', 'py-1', 'whitespace-nowrap'));
+        });
+
+        body.querySelectorAll('.excel-tab-btn').forEach(btn => {
+            const active = btn.dataset.sheet === String(idx);
+            btn.classList.toggle('border-green-600', active);
+            btn.classList.toggle('text-green-700', active);
+            btn.classList.toggle('font-semibold', active);
+            btn.classList.toggle('bg-white', active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-500', !active);
+        });
+    }
+
+    body.querySelectorAll('.excel-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => showSheet(parseInt(btn.dataset.sheet, 10)));
+    });
+
+    showSheet(0);
+}
+</script>
 @endsection
 

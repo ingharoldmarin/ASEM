@@ -3,11 +3,19 @@
 @section('header', 'Asistencia del ' . $session->date->format('d/m/Y'))
 
 @section('content')
-<div class="mb-4 flex items-center gap-2 text-sm text-gray-500">
-    <a href="{{ route('attendance.index', $ficha) }}" class="hover:link-primary">← Volver</a>
-    @if($session->topic)
-    <span>|</span>
-    <span>{{ $session->topic }}</span>
+<div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center gap-2 text-sm text-gray-500">
+        <a href="{{ route('attendance.index', $ficha) }}" class="hover:link-primary">← Volver</a>
+        @if($session->topic)
+        <span>|</span>
+        <span>{{ $session->topic }}</span>
+        @endif
+    </div>
+    @if(auth()->user()->isInstructor() || auth()->user()->canManage())
+    <a href="{{ route('attendance.edit', [$ficha, $session]) }}"
+       class="btn-primary text-sm px-4 py-2 rounded-lg transition-colors">
+        Editar asistencia
+    </a>
     @endif
 </div>
 
